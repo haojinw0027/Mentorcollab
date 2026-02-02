@@ -1,0 +1,17 @@
+prompt_format:
+  - |+
+    You are given a puzzle about a crime, which include a crime statement, a set of facts, a question, and a set of suspects (options). You should conduct detailed analysis to find the most plausible suspect as the criminal. At the end of your answer, choose answer to the question in format such as "Answer: A)____."
+
+    Crime:
+    {crime}
+
+    Facts:
+    {facts}
+
+    Question:
+    {question}
+
+    Options:
+    {options}
+
+    Detailed analysis:

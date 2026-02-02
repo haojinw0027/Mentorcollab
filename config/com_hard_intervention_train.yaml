@@ -1,0 +1,11 @@
+prompt_format:
+  - |+
+    You are given a multi-choice question and a set of plausible options. You must choose the most plausible option as the answer based on commonsense. You should give a detailed analysis first and then choose the answer. At the end of your answer, choose answer to the question in format such as "Answer: A)____."
+
+    Question:
+    {question}
+
+    Options:
+    {options}
+
+    Detailed analysis:

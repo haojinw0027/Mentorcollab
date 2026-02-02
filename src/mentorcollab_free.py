@@ -321,6 +321,8 @@ def parse_arguments():
                         help="Number of tokens to complete")
     parser.add_argument("--max_workers", type=int, default=1,
                         help="Number of parallel workers for processing (default: 1, sequential processing)")
+    parser.add_argument("--drop_proportion", type=int, default=5,
+                        help="Proportion of samples to drop from the dataset")
     return parser.parse_args()
 
 def load_results(file_path: str) -> List[Dict[str, Any]]:
@@ -482,7 +484,7 @@ Answer: Let's think step by step. """
 
 class TripleModelGenerator:
     def __init__(self, base_model_name: str, expert_model_name: str, 
-                 hf_token: str, base_port: int = 8000, expert_port: int = 8001, consult_model: str = 'base', complete_tokens: int = 16):
+                 hf_token: str, base_port: int = 8000, expert_port: int = 8001, consult_model: str = 'base', complete_tokens: int = 16, drop_proportion: int = 5):
         
         self.base_model_name = base_model_name
         self.expert_model_name = expert_model_name
@@ -491,6 +493,7 @@ class TripleModelGenerator:
         self.confidence_threshold = 0.40
         self.consult_model = consult_model
         self.complete_tokens = complete_tokens
+        self.drop_proportion = drop_proportion
         # Test connections to vLLM serve endpoints
         self._test_connections()
         print(f"Using base model at port {base_port}")
@@ -728,7 +731,6 @@ class TripleModelGenerator:
             base_token = ''
             expert_token = ''
             expert_probability = 0.0
-            prev_entropy = self.calculate_entropy(current_prompt)
             # Get next token from base model
             base_token_id, base_probability = self.get_next_token_with_logits(
                 self.base_port, current_prompt, self.base_tokenizer
@@ -753,10 +755,10 @@ class TripleModelGenerator:
                 else:
                     base_token += _base_token
                 process += 1
-            next_entropy = self.calculate_entropy(current_prompt + base_token)
-            if 5 * next_entropy > prev_entropy:
+            random_choice = random.randint(1,100)
+            if random_choice >= self.drop_proportion:
                 next_token = base_token
-                model_used = "base_none_crtical"
+                model_used = "base_none_mentor"
                 base_model_count += 1
                 confidence = initial_base_probability
             else:
@@ -796,14 +798,14 @@ class TripleModelGenerator:
                     consult_token = self.base_tokenizer.decode([consult_token_id], skip_special_tokens=True)
                     if consult_token == "A" or consult_token == " A":
                         next_token = base_completion
-                        model_used = "base_critical"
+                        model_used = "base_mentor"
                         base_model_count += 1
                         confidence = initial_base_probability
                         base_consult = base_completion
                         expert_consult = expert_completion
                     elif consult_token == "B" or consult_token == " B":
                         next_token = expert_completion
-                        model_used = "expert_critical"
+                        model_used = "expert_mentor"
                         expert_model_count += 1
                         confidence = initial_expert_probability
                         base_consult = base_completion
@@ -827,10 +829,8 @@ class TripleModelGenerator:
                 "confidence": confidence,
                 "base_confidence": initial_base_probability,
                 "expert_confidence": initial_expert_probability if expert_token!='' else 0.0,
-                "Prev_entropy": prev_entropy,
-                "Next_entropy": next_entropy,
-                "base_consult": base_consult if model_used == "base_critical" or model_used == "expert_critical" or model_used == "base_error" or model_used == "expert_error" else "",
-                "expert_consult": expert_consult if model_used == "base_critical" or model_used == "expert_critical" or model_used == "base_error" or model_used == "expert_error" else "",
+                "base_consult": base_consult if model_used == "base_mentor" or model_used == "expert_mentor" or model_used == "base_error" or model_used == "expert_error" else "",
+                "expert_consult": expert_consult if model_used == "base_mentor" or model_used == "expert_mentor" or model_used == "base_error" or model_used == "expert_error" else "",
             })
             if next_token == "":
                 break
@@ -1081,7 +1081,8 @@ def main():
         hf_token=args.hf_token,
         base_port=args.base_port,
         expert_port=args.expert_port,
-        consult_model=args.consult_model
+        consult_model=args.consult_model,
+        drop_proportion=args.drop_proportion
     )
     generator.set_confidence_threshold(args.confidence_threshold)
     
@@ -1094,14 +1095,14 @@ def main():
     
     if args.consult_model == 'base':
         if args.few_shot == 'yes':
-            output_file = f'./result/{dataset_dir}/{MODEL_NAME_DICT[args.base_model]}/{args.split}/{MODEL_NAME_DICT[args.expert_model]}/self_judge_word_seq_{args.complete_tokens}.json'
+            output_file = f'./result/{dataset_dir}/{MODEL_NAME_DICT[args.base_model]}/{args.split}/{MODEL_NAME_DICT[args.expert_model]}/self_judge_word_seq_{args.complete_tokens}_random_{args.drop_proportion}.json'
         else:
-            output_file = f'./result/{dataset_dir}/zero_shot/{MODEL_NAME_DICT[args.base_model]}/{args.split}/{MODEL_NAME_DICT[args.expert_model]}/self_judge_word_seq_{args.complete_tokens}.json'
+            output_file = f'./result/{dataset_dir}/zero_shot/{MODEL_NAME_DICT[args.base_model]}/{args.split}/{MODEL_NAME_DICT[args.expert_model]}/self_judge_word_seq_{args.complete_tokens}_random_{args.drop_proportion}.json'
     if args.consult_model == 'expert':
         if args.few_shot == 'yes':
-            output_file = f'./result/{dataset_dir}/{MODEL_NAME_DICT[args.base_model]}/{args.split}/{MODEL_NAME_DICT[args.expert_model]}/self_judge_word_seq_{args.complete_tokens}.json'
+            output_file = f'./result/{dataset_dir}/{MODEL_NAME_DICT[args.base_model]}/{args.split}/{MODEL_NAME_DICT[args.expert_model]}/self_judge_word_seq_{args.complete_tokens}_random_{args.drop_proportion}.json'
         else:
-            output_file = f'./result/{dataset_dir}/zero_shot/{MODEL_NAME_DICT[args.base_model]}/{args.split}/{MODEL_NAME_DICT[args.expert_model]}/self_judge_word_seq_{args.complete_tokens}.json'
+            output_file = f'./result/{dataset_dir}/zero_shot/{MODEL_NAME_DICT[args.base_model]}/{args.split}/{MODEL_NAME_DICT[args.expert_model]}/self_judge_word_seq_{args.complete_tokens}_random_{args.drop_proportion}.json'
     
     print(f"Output file: {output_file}")
     print(f"Configuration:")
@@ -1113,6 +1114,7 @@ def main():
     print(f"  - Number of samples: {args.num_samples}")
     print(f"  - Base model port: {args.base_port}")
     print(f"  - Expert model port: {args.expert_port}")
+    print(f"  - Drop proportion: {args.drop_proportion}")
     
     # Load existing results
     results = load_results(output_file)

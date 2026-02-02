@@ -1,0 +1,17 @@
+prompt_format:
+  - |+
+    You are given a statement and some facts of a crime. You should conduct detailed analysis to find the most plausible option as the answer to the question. At the end of your answer, choose answer to the question in format such as "Answer: A)____."
+
+    Crime:
+    {crime}
+
+    Facts:
+    {facts}
+
+    Question:
+    {question}
+
+    Options:
+    {options}
+
+    Detailed analysis:

@@ -1,38 +1,19 @@
-# Mentorcollab
+# MentorCollab
 
 > This is the official repo for **MENTORCOLLAB: Selective Large-to-Small Inference-Time Guidance for Efficient Reasoning**
 
-A double-model collaborative inference system that dynamically routes between base and expert models for efficient and accurate multi-task language understanding and reasoning.
+A dual-model collaborative inference system that dynamically routes between base and expert models for efficient and accurate multi-task language understanding and reasoning.
 
 ## Overview
 
-Mentorcollab implements an innovative inference framework that dynamically selects models based on task difficulty:
-- **Base Model**: Handles straightforward tasks efficiently
-- **Expert Model**: Tackles complex problems for better accuracy
-- **Decision Mechanism**: When models disagree, uses entropy analysis or MLP prediction to select the optimal choice
+MentorCollab implements an innovative inference framework that dynamically selects models based on task difficulty:
+- **Base Model**: Handles straightforward tasks efficiently (smaller model)
+- **Expert Model**: Tackles complex problems for better accuracy (larger model)
+- **Decision Mechanism**: When models disagree, uses self-consultation or MLP prediction to select the optimal output
 
 ## Architecture
 
-```
-Input Prompt
-    │
-    ▼
-Base Model generates token
-    │
-    ▼
-Expert Model generates token (if needed)
-    │
-    ▼
-Decision Point:
-  - Tokens match → use base model
-  - Tokens differ → consult decision mechanism
-    │
-    ▼
-Generate completion sequence
-    │
-    ▼
-Output answer + statistics
-```
+![MentorCollab Method](figs/Method.png)
 
 ## Main Components
 
@@ -40,16 +21,29 @@ Output answer + statistics
 
 | File | Description |
 |------|-------------|
-| `src/mentorcollab_free.py` | Entropy-based decision version using information entropy to judge model confidence |
+| `src/mentorcollab_free.py` | Self-consultation decision version with parallel processing support |
 | `src/mentorcollab_mlp.py` | MLP-based decision version using a trained neural network for routing |
+| `src/utils.py` | Utility functions including `BranchPredictionMLP` model and prompt templates |
 
 ### Core Class: TripleModelGenerator
 
-- `__init__()`: Initialize models, tokenizers, and MLP (optional)
-- `_test_connections()`: Verify vLLM endpoint connections
-- `generate_sequence()`: Call vLLM API to generate token sequences
-- `get_next_token_with_logits()`: Get next token and probability distribution
-- `generate_with_triple_model()`: Main inference loop orchestrating routing logic
+| Method | Description |
+|--------|-------------|
+| `__init__()` | Initialize models, tokenizers, and optionally MLP model |
+| `_test_connections()` | Verify vLLM endpoint connections and model name matching |
+| `generate_sequence()` | Call vLLM API to generate token sequences |
+| `get_next_token_with_logits()` | Get next token and probability distribution |
+| `calculate_entropy()` | Calculate entropy of top-k softmax scores (free version) |
+| `extract_hidden_state_at_branch()` | Extract hidden states for MLP decision (MLP version) |
+| `predict_branch_with_mlp()` | Use MLP to predict branch choice (MLP version) |
+| `generate_with_triple_model()` | Main inference loop orchestrating routing logic |
+
+### BranchPredictionMLP
+
+A neural network for branch prediction with architecture:
+- Input: hidden_size from language model
+- MLP: hidden_size → 2×hidden_size → hidden_size → hidden_size/2
+- Output: sigmoid score (>0.5 → Option A, ≤0.5 → Option B)
 
 ## Supported Datasets
 
@@ -59,7 +53,7 @@ Output answer + statistics
 | MATH | Mathematical Reasoning | Math problem solving |
 | Minerva | Advanced Math | Complex mathematical reasoning |
 | SuperGPQA | Science Q&A | Expert-level science questions |
-| Com2 Hard | Legal/Commonsense | Legal case analysis and commonsense reasoning |
+| Com2 Hard | Legal/Commonsense | Legal case analysis and intervention reasoning |
 | ARC Challenge | Factual Reasoning | Science fact Q&A (free version only) |
 
 ## Tech Stack
@@ -69,24 +63,32 @@ Output answer + statistics
 - **vLLM**: High-performance inference server
 - **Datasets**: Hugging Face datasets library
 - **NumPy**: Numerical computation
+- **YAML**: Configuration for prompt templates
 
 ## Usage
 
 ### Prerequisites
 
 1. Start vLLM services:
-   - Base model: port 8000
-   - Expert model: port 8001
+   - Base model: port 8000 (default)
+   - Expert model: port 8001 (default)
+
+2. Prepare dataset files (if using local data):
+   - `data/mmlu_pro_test` and `data/mmlu_pro_train` for MMLU-Pro
+   - `Com2/benckmark/` for Com2 Hard dataset
 
 ### Running Inference
 
-**Entropy-based version:**
+**Self-consultation version (Free):**
 ```bash
 python src/mentorcollab_free.py \
-    --base_model_path <base_model_path> \
-    --expert_model_path <expert_model_path> \
-    --dataset mmlu_pro \
-    --output_dir results/
+    --base_model <base_model_name> \
+    --expert_model <expert_model_name> \
+    --benchmark mmlu_pro \
+    --num_samples 500 \
+    --max_new_tokens 512 \
+    --drop_proportion 5 \
+    --max_workers 4
 ```
 
 **MLP-based version:**
@@ -95,39 +97,58 @@ You can download the MLP model from [Hugging Face](https://huggingface.co/SeanWa
 
 ```bash
 python src/mentorcollab_mlp.py \
-    --base_model_path <base_model_path> \
-    --expert_model_path <expert_model_path> \
+    --base_model <base_model_name> \
+    --expert_model <expert_model_name> \
+    --benchmark mmlu_pro \
+    --use_mlp \
     --mlp_path <mlp_model_path> \
-    --dataset mmlu_pro \
-    --output_dir results/
+    --mlp_threshold 0.5 \
+    --reference_model <reference_model_for_hidden_states> \
+    --num_samples 500
 ```
-
 
 ### Key Arguments
 
-| Argument | Description |
-|----------|-------------|
-| `--base_model_path` | Path to base model |
-| `--expert_model_path` | Path to expert model |
-| `--dataset` | Evaluation dataset name |
-| `--output_dir` | Results output directory |
-| `--max_tokens` | Maximum tokens to generate |
-| `--mlp_path` | MLP model path (MLP version only) |
-| `--mlp_threshold` | MLP decision threshold (MLP version only) |
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--base_model` | Path/name of base model (must be in MODEL_NAME_DICT) | Required |
+| `--expert_model` | Path/name of expert model (must be in MODEL_NAME_DICT) | Required |
+| `--benchmark` | Dataset name (mmlu_pro, MATH, supergpqa, minerva, com_hard_intervention, arc_challenge) | mmlu_pro |
+| `--num_samples` | Number of samples to process | 500 |
+| `--max_new_tokens` | Maximum tokens to generate | 512 |
+| `--base_port` | Port for base model vLLM endpoint | 8000 |
+| `--expert_port` | Port for expert model vLLM endpoint | 8001 |
+| `--drop_proportion` | Percentage of samples to skip mentor consultation (1-100) | 5 |
+| `--complete_tokens` | Number of tokens for completion comparison | 16 |
+| `--split` | Dataset split to use | test |
+| `--subject` | Subject filter for MMLU-Pro/SuperGPQA | None |
+| `--few-shot` | Whether to use few-shot prompting (yes/no) | yes |
+| `--max_workers` | Parallel workers for processing (free version) | 1 |
+
+**MLP-specific Arguments:**
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--use_mlp` | Enable MLP-based decision | False |
+| `--mlp_path` | Path to trained MLP model (.pth file) | None |
+| `--mlp_threshold` | MLP decision threshold | 0.5 |
+| `--reference_model` | Reference model for extracting hidden states | None |
+| `--reference_device` | Device for reference model | cuda:4 |
 
 ## Decision Strategies
 
-### Entropy-based Version (Free)
-1. Calculate entropy of base model's next token distribution
-2. If entropy exceeds threshold, use base model directly
-3. Otherwise, compare base and expert model outputs
-4. When outputs differ, use entropy analysis to select optimal model
+### Self-consultation Version (Free)
+1. Generate word from base model
+2. Random sampling decides whether to consult mentor (based on drop_proportion)
+3. If consulting: compare base and expert model outputs
+4. When outputs differ: generate completion sequences from both models
+5. Use self-consultation prompt to choose between Option A (base) and Option B (expert)
 
 ### MLP-based Version
-1. Random drop sampling (default 5%)
-2. For non-dropped samples: compare base vs expert outputs
-3. When outputs differ: extract hidden state features
-4. Use trained MLP to predict optimal branch
+1. Same initial steps as free version
+2. When outputs differ: extract hidden states at decision point
+3. Use trained MLP to predict optimal branch (A or B)
+4. MLP score > threshold → choose base completion, otherwise → choose expert completion
 
 ## Output
 
@@ -136,14 +157,30 @@ Inference results are saved as JSON files containing:
 - Base/expert model token usage statistics
 - Confidence scores
 - Decision statistics
-- Detailed token choice logs
+- Detailed token choice logs (including model_used, confidence, consult completions)
+- MLP scores (for MLP version)
+
+Output path format:
+```
+./result/{dataset}_results/{base_model}/{split}/{expert_model}/self_judge_word_seq_{tokens}_random_{drop}.json
+```
 
 ## Features
 
 - **Checkpoint Support**: Resume processing from last saved result
 - **Parallel Processing**: Free version supports multi-threaded execution
+- **Model Verification**: Validates deployed model names match expected models
 - **Detailed Logging**: Saves token-level decisions and probabilities
 - **Flexible Configuration**: Extensive command-line arguments
+- **Subject Filtering**: Filter MMLU-Pro and SuperGPQA by subject/field
+
+## Configuration Files
+
+Prompt templates are stored in `config/`:
+- `minerva.yaml`: Minerva dataset prompt format
+- `super_gpqa.yaml`: SuperGPQA prompt format with 5-shot examples
+- `com_hard_intervention.yaml`: Com2 Hard intervention prompt format
+- `com_hard_intervention_train.yaml`: Com2 Hard training prompt format
 
 ## License
 

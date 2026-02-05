@@ -7,8 +7,8 @@ A dual-model collaborative inference system where a mentoring LRM selectively an
 ## Overview
 
 MentorCollab implements an innovative inference framework that dynamically selects models based on task difficulty:
-- **Base Model**: Handles straightforward tasks efficiently (smaller model)
-- **Expert Model**: Tackles complex problems for better accuracy (larger model)
+- **Generator Model**: Handles straightforward tasks efficiently (smaller model, typically shorter reasoning)
+- **Mentor Model**: Tackles complex problems for better accuracy (larger model, typically longer reasoning)
 - **Decision Mechanism**: When models disagree, uses self-consultation or MLP prediction to select the optimal output
 
 ## Architecture
@@ -59,8 +59,8 @@ A neural network for branch prediction with architecture:
 ### Prerequisites
 
 1. Start vLLM services:
-   - Base model: port 8000 (default)
-   - Expert model: port 8001 (default)
+   - Generator model: port 8000 (default)
+   - Mentor model: port 8001 (default)
 
 2. Prepare dataset files (if using local data):
    - `data/mmlu_pro_test` and `data/mmlu_pro_train` for MMLU-Pro
@@ -131,19 +131,19 @@ python src/mentorcollab_mlp.py \
 2. Random sampling decides whether to consult mentor (based on drop_proportion)
 3. If consulting: compare generator and mentor model outputs
 4. When outputs differ: generate completion sequences from both models
-5. Use self-consultation prompt to choose between Option A (base) and Option B (expert)
+5. Use self-consultation prompt to choose between Option A (generator) and Option B (mentor)
 
 ### MLP-based Version
 1. Same initial steps as free version
 2. When outputs differ: extract hidden states at decision point
 3. Use trained MLP to predict optimal branch (A or B)
-4. MLP score > threshold → choose base completion, otherwise → choose expert completion
+4. MLP score > threshold → choose generator completion, otherwise → choose mentor completion
 
 ## Output
 
 Inference results are saved as JSON files containing:
 - Generated answer
-- Generator/mentor model token usage statistics
+- Generator/Mentor model token usage statistics
 - Confidence scores
 - Decision statistics
 - Detailed token choice logs (including model_used, confidence, consult completions)

@@ -2,7 +2,7 @@
 
 > This is the official repo for **MENTORCOLLAB: Selective Large-to-Small Inference-Time Guidance for Efficient Reasoning**
 
-A dual-model collaborative inference system that dynamically routes between base and expert models for efficient and accurate multi-task language understanding and reasoning.
+A dual-model collaborative inference system where a mentoring LRM selectively and sparsely guides a generating SLM, rather than taking over generation. 
 
 ## Overview
 

@@ -9,6 +9,61 @@ import torch
 import torch.nn as nn
 from torchvision.ops import MLP
 
+MODEL_NAME_DICT = {
+    "meta-llama/Llama-3.1-8B-Instruct": "llama-3.1-8b",
+    "meta-llama/Llama-3.1-8B": "llama-3.1-8b-base",
+    "meta-llama/Llama-3.1-70B-Instruct": "llama-3.1-70b",
+    "meta-llama/Llama-3.1-70B": "llama-3.1-70b-base",
+    "google/gemma-3-12b-pt": "gemma-3-12b-base",
+    "google/gemma-3-12b-it": "gemma-3-12b",
+    "mistralai/Mistral-Small-3.1-24B-Base-2503": "mistral-small-3.1-24b",
+    "mistralai/Mistral-Small-3.1-24B-Instruct-2503": "mistral-small-3.1-24b",
+    "google/gemma-3-4b-pt": "gemma-3-4b-base",
+    "google/gemma-3-4b-it": "gemma-3-4b",
+    "google/gemma-3-1b-pt": "gemma-3-1b-base",
+    "google/gemma-3-1b-it": "gemma-3-1b",
+    "meta-llama/Llama-3.2-1B": 'llama-3.2-1B-base',
+    "meta-llama/Llama-3.2-1B-Instruct": 'llama-3.2-1B',
+    "meta-llama/Llama-3.2-3B": 'llama-3.2-3B-base',
+    "meta-llama/Llama-3.2-3B-Instruct": 'llama-3.2-3B',
+    "google/gemma-3-27b-it": "gemma-3-27b",
+    "google/gemma-3-27b-pt": "gemma-3-27b-base",
+    "Qwen/Qwen3-32B-FP8": "qwen-3.2-32b",
+    "meta-llama/Llama-3.2-1B-Instruct": "llama-3.2-1b",
+    "meta-llama/Llama-3.2-3B-Instruct": "llama-3.2-3b",
+    "meta-llama/Llama-3.2-1B": "llama-3.2-1b-base",
+    "meta-llama/Llama-3.2-3B": "llama-3.2-3b-base",
+    "Qwen/Qwen3-14B-Base": "qwen3-14b-base",
+    "Qwen/Qwen3-14B": "qwen3-14b",
+    "Qwen/Qwen3-8B-Base": "qwen3-8b-base",
+    "Qwen/Qwen3-8B": "qwen3-8b",
+    "Qwen/Qwen3-4B-Base": "qwen3-4b-base",
+    "Qwen/Qwen3-4B": "qwen3-4b",
+    "Qwen/Qwen3-1.7B-Base": "qwen3-1.7b-base",
+    "Qwen/Qwen3-1.7B": "qwen3-1.7b",
+    "Qwen/Qwen3-0.6B-Base": "qwen3-0.6b-base",
+    "Qwen/Qwen3-0.6B": "qwen3-0.6b",
+    "Qwen/Qwen3-4B-Thinking-2507-FP8": "qwen3-4b-thinking-2507-fp8",
+    "meta-llama/Llama-3.3-70B-Instruct": "llama-3.3-70b",
+    "deepseek-ai/DeepSeek-R1-Distill-Llama-70B": "deepseek-r1-distill-llama-70b",
+    "openai/gpt-oss-20b": "gpt-oss-20b",
+    "nvidia/NVIDIA-Nemotron-Nano-12B-v2": "nvidia-nemotron-nano-12b-v2",
+    "microsoft/Phi-4-reasoning": "phi-4-reasoning",
+    "zai-org/GLM-4-32B-0414": "glm-4-32b-0414",
+    "Qwen/Qwen3-32B": "qwen3-32b",
+    "deepseek-ai/DeepSeek-R1-Distill-Llama-8B": "deepseek-r1-distill-llama-8b",
+    "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B": "deepseek-r1-0528-qwen3-8b",
+    "Qwen/QwQ-32B": "qwq-32b",
+    "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B": "deepseek-r1-distill-qwen-14b",
+    "Qwen/Qwen3-4B-Thinking-2507": "qwen3-4b-thinking-2507",
+    "Qwen/Qwen2-72B": "qwen2-72b",
+}
+
+INSTRUCT_MODEL_LIST = [ "qwen3-32b", "qwq-32b", "glm-4-32b-0414", "qwen3-4b-thinking-2507", "deepseek-r1-distill-qwen-14b", "deepseek-r1-distill-llama-8b", "deepseek-r1-0528-qwen3-8b", "nvidia/NVIDIA-Nemotron-Nano-12B-v2", "microsoft/Phi-4-reasoning", "openai/gpt-oss-20b", "meta-llama/Llama-3.3-70B-Instruct", "Qwen/Qwen3-1.7B", "deepseek-ai/DeepSeek-R1-Distill-Llama-70B", "Qwen/Qwen3-0.6B", "Qwen/Qwen3-8B", "Qwen/Qwen3-4B", "Qwen/Qwen3-14B", "google/gemma-3-27b-it", "meta-llama/Llama-3.2-3B-Instruct", "meta-llama/Llama-3.2-1B-Instruct", "google/gemma-3-1b-it", "meta-llama/Llama-3.1-70B-Instruct", "meta-llama/Llama-3.1-8B-Instruct", "google/gemma-3-12b-it", "mistralai/Mistral-Small-3.1-24B-Instruct-2503", "google/gemma-3-4b-it", "meta-llama/Llama-3.1-1B-Instruct", "meta-llama/Llama-3.1-3B-Instruct"]
+
+def apply_instruct_template(model_name, system_prompt, instruct_prompt, response_prompt, add_bos=False):
+    return f"{system_prompt}\n{instruct_prompt}\n{response_prompt}"
+
 
 class BranchPredictionMLP(nn.Module):
     """

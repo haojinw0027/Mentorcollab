@@ -45,17 +45,6 @@ A neural network for branch prediction with architecture:
 - MLP: hidden_size → 2×hidden_size → hidden_size → hidden_size/2
 - Output: sigmoid score (>0.5 → Option A, ≤0.5 → Option B)
 
-## Supported Datasets
-
-| Dataset | Type | Description |
-|---------|------|-------------|
-| MMLU-Pro | Multiple Choice | Cross-domain knowledge Q&A |
-| MATH | Mathematical Reasoning | Math problem solving |
-| Minerva | Advanced Math | Complex mathematical reasoning |
-| SuperGPQA | Science Q&A | Expert-level science questions |
-| Com2 Hard | Legal/Commonsense | Legal case analysis and intervention reasoning |
-| ARC Challenge | Factual Reasoning | Science fact Q&A (free version only) |
-
 ## Tech Stack
 
 - **PyTorch**: Deep learning framework
@@ -82,8 +71,8 @@ A neural network for branch prediction with architecture:
 **Self-consultation version (Free):**
 ```bash
 python src/mentorcollab_free.py \
-    --base_model <base_model_name> \
-    --expert_model <expert_model_name> \
+    --base_model <generator_model_name> \
+    --expert_model <mentor_model_name> \
     --benchmark mmlu_pro \
     --num_samples 500 \
     --max_new_tokens 512 \
@@ -97,8 +86,8 @@ You can download the MLP model from [Hugging Face](https://huggingface.co/SeanWa
 
 ```bash
 python src/mentorcollab_mlp.py \
-    --base_model <base_model_name> \
-    --expert_model <expert_model_name> \
+    --base_model <generator_model_name> \
+    --expert_model <mentor_model_name> \
     --benchmark mmlu_pro \
     --use_mlp \
     --mlp_path <mlp_model_path> \
@@ -111,13 +100,13 @@ python src/mentorcollab_mlp.py \
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--base_model` | Path/name of base model (must be in MODEL_NAME_DICT) | Required |
-| `--expert_model` | Path/name of expert model (must be in MODEL_NAME_DICT) | Required |
+| `--base_model` | Path/name of generator model (must be in MODEL_NAME_DICT) | Required |
+| `--expert_model` | Path/name of mentor model (must be in MODEL_NAME_DICT) | Required |
 | `--benchmark` | Dataset name (mmlu_pro, MATH, supergpqa, minerva, com_hard_intervention, arc_challenge) | mmlu_pro |
 | `--num_samples` | Number of samples to process | 500 |
 | `--max_new_tokens` | Maximum tokens to generate | 512 |
-| `--base_port` | Port for base model vLLM endpoint | 8000 |
-| `--expert_port` | Port for expert model vLLM endpoint | 8001 |
+| `--base_port` | Port for generator model vLLM endpoint | 8000 |
+| `--expert_port` | Port for mentor model vLLM endpoint | 8001 |
 | `--drop_proportion` | Percentage of samples to skip mentor consultation (1-100) | 5 |
 | `--complete_tokens` | Number of tokens for completion comparison | 16 |
 | `--split` | Dataset split to use | test |
@@ -138,9 +127,9 @@ python src/mentorcollab_mlp.py \
 ## Decision Strategies
 
 ### Self-consultation Version (Free)
-1. Generate word from base model
+1. Generate word from generator model
 2. Random sampling decides whether to consult mentor (based on drop_proportion)
-3. If consulting: compare base and expert model outputs
+3. If consulting: compare generator and mentor model outputs
 4. When outputs differ: generate completion sequences from both models
 5. Use self-consultation prompt to choose between Option A (base) and Option B (expert)
 
@@ -154,7 +143,7 @@ python src/mentorcollab_mlp.py \
 
 Inference results are saved as JSON files containing:
 - Generated answer
-- Base/expert model token usage statistics
+- Generator/mentor model token usage statistics
 - Confidence scores
 - Decision statistics
 - Detailed token choice logs (including model_used, confidence, consult completions)
@@ -165,23 +154,17 @@ Output path format:
 ./result/{dataset}_results/{base_model}/{split}/{expert_model}/self_judge_word_seq_{tokens}_random_{drop}.json
 ```
 
-## Features
-
-- **Checkpoint Support**: Resume processing from last saved result
-- **Parallel Processing**: Free version supports multi-threaded execution
-- **Model Verification**: Validates deployed model names match expected models
-- **Detailed Logging**: Saves token-level decisions and probabilities
-- **Flexible Configuration**: Extensive command-line arguments
-- **Subject Filtering**: Filter MMLU-Pro and SuperGPQA by subject/field
-
 ## Configuration Files
 
 Prompt templates are stored in `config/`:
-- `minerva.yaml`: Minerva dataset prompt format
 - `super_gpqa.yaml`: SuperGPQA prompt format with 5-shot examples
 - `com_hard_intervention.yaml`: Com2 Hard intervention prompt format
-- `com_hard_intervention_train.yaml`: Com2 Hard training prompt format
 
-## License
+## Questions
+If you have any questions or comments about our paper, data, or scripts, or if you notice any issues in the code, feel free to reach out via email at `haojinw2@illinois.edu`. We will do our best to respond within two business day.
 
-[To be added]
+## Citing
+If you found this work helpful, please consider starring this repository and citing our paper as shown below:
+```latex
+@misc{
+}

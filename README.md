@@ -166,5 +166,12 @@ If you have any questions or comments about our paper, data, or scripts, or if y
 ## Citing
 If you found this work helpful, please consider starring this repository and citing our paper as shown below:
 ```latex
-@misc{
+@misc{wang2026mentorcollabselectivelargetosmallinferencetime,
+      title={MentorCollab: Selective Large-to-Small Inference-Time Guidance for Efficient Reasoning}, 
+      author={Haojin Wang and Yike Wang and Shangbin Feng and Hannaneh Hajishirzi and Yulia Tsvetkov},
+      year={2026},
+      eprint={2602.05307},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2602.05307}, 
 }

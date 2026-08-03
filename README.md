@@ -78,8 +78,6 @@ python src/mentorcollab_free.py \
 
 **MLP-based version:**
 
-You can download the MLP model from [Hugging Face](https://huggingface.co/SeanWang0027/MentorCollab-MLP).
-
 ```bash
 python src/mentorcollab_mlp.py \
     --base_model <generator_model_name> \

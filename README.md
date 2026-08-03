@@ -1,6 +1,6 @@
 # MentorCollab
 
-> This is the official repo for **MENTORCOLLAB: Selective Large-to-Small Inference-Time Guidance for Efficient Reasoning**
+> This is the official repo for **MENTORCOLLAB: Large-to-Small Inference-Time Mentorship for Concise Reasoning in Language Models**
 
 A dual-model collaborative inference system where a mentoring LRM selectively and sparsely guides a generating SLM, rather than taking over generation. 
 
@@ -10,10 +10,6 @@ MentorCollab implements an innovative inference framework that dynamically selec
 - **Generator Model**: Handles straightforward tasks efficiently (smaller model, typically shorter reasoning)
 - **Mentor Model**: Tackles complex problems for better accuracy (larger model, typically longer reasoning)
 - **Decision Mechanism**: When models disagree, uses self-consultation or MLP prediction to select the optimal output
-
-## Architecture
-
-![MentorCollab Method](figs/Method.png)
 
 ## Main Components
 
@@ -160,18 +156,3 @@ Prompt templates are stored in `config/`:
 - `super_gpqa.yaml`: SuperGPQA prompt format with 5-shot examples
 - `com_hard_intervention.yaml`: Com2 Hard intervention prompt format
 
-## Questions
-If you have any questions or comments about our paper, data, or scripts, or if you notice any issues in the code, feel free to reach out via email at `haojinw2@illinois.edu`. We will do our best to respond within two business day.
-
-## Citing
-If you found this work helpful, please consider starring this repository and citing our paper as shown below:
-```latex
-@misc{wang2026mentorcollabselectivelargetosmallinferencetime,
-      title={MentorCollab: Selective Large-to-Small Inference-Time Guidance for Efficient Reasoning}, 
-      author={Haojin Wang and Yike Wang and Shangbin Feng and Hannaneh Hajishirzi and Yulia Tsvetkov},
-      year={2026},
-      eprint={2602.05307},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2602.05307}, 
-}
